@@ -1,0 +1,41 @@
+apiVersion: apps/vq
+kind: Deployment
+metadata:
+  name: vprodb
+  labels:
+    app: vprodb # for service def file; we are going to create a service of type clusterIP,
+                # and our service is going to route the request to any port that has this label
+spec:
+  selector:
+    matchLabels:
+      app: vprodb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vprodb
+    spec:
+      containers:
+        - name: vprodb
+          image: vprofile/vprofiledb:V1
+          args:
+            - "ignore-db-dir=lost+found"
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: vpro-db-data
+          ports:
+            - name: vprodb-port
+              containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: db-pass # key in the config in db-pass and will assign it to the variable MYSQL_ROOT_PASSWORD
+      nodeSelector:
+        zone: us-east-1a
+      volumes:
+        - name: vpro-data-data
+          awsElasticBlockStore:
+            volumeID: vol-06061e2c12aace6fa
+            fsType: ext4
